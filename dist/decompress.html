@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>tauzip Decompression</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        .file-list {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        .file-item {
+            margin-bottom: 3px;
+            padding: 3px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        .file-count {
+            font-weight: 600;
+            color: #007acc;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #007acc;
+        }
+        .progress-container {
+            margin: 20px 0;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 24px;
+            background-color: #e9ecef;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #dee2e6;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 12px;
+            position: relative;
+        }
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            z-index: 1;
+            width: 100%;
+            text-align: center;
+        }
+        .status-text {
+            text-align: center;
+            margin: 10px 0;
+            font-size: 14px;
+            color: #6c757d;
+            min-height: 20px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .btn-primary {
+            background-color: #007acc;
+            color: white;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background-color: #005a9e;
+        }
+        .btn-primary:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover:not(:disabled) {
+            background-color: #545b62;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover:not(:disabled) {
+            background-color: #c82333;
+        }
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background-color: #218838;
+        }
+        .hidden {
+            display: none;
+        }
+        .success-message {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        .error-message {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        .show-folder-btn {
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .show-folder-btn:hover {
+            background-color: #138496;
+        }
+        .debug-info {
+            background-color: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-bottom: 20px;
+            font-family: monospace;
+        }
+        .archive-count {
+            font-weight: 600;
+            color: #007acc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>tauzip Decompression</h2>
+        
+        <div id="debugInfo" class="debug-info">
+            Loading decompression interface...
+        </div>
+        
+        <div class="form-group">
+            <label>Archives to Extract:</label>
+            <div id="fileList" class="file-list">
+                <div class="file-item" style="color: #999;">Waiting for archive selection...</div>
+            </div>
+        </div>
+        
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill">
+                    <div id="progressText" class="progress-text">Ready to start</div>
+                </div>
+            </div>
+            <div id="statusText" class="status-text">Click "Start Extraction" to begin</div>
+        </div>
+        
+        <div id="resultMessage" class="hidden"></div>
+        
+        <div class="button-group">
+            <button type="button" class="btn-secondary" id="cancelBtn">Cancel</button>
+            <button type="button" class="btn-primary" id="startBtn">Start Extraction</button>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let selectedArchives = [];
+        let tauriAPI = null;
+        let isExtracting = false;
+        let lastExtractedLocation = null;
+        let operationCancelled = false;
+        
+        // Initialize Tauri APIs with proper error handling
+        function initializeTauriAPIs() {
+            try {
+                if (window.__TAURI__ && window.__TAURI__.tauri && window.__TAURI__.window && window.__TAURI__.event) {
+                    tauriAPI = {
+                        invoke: window.__TAURI__.tauri.invoke,
+                        appWindow: window.__TAURI__.window.appWindow,
+                        listen: window.__TAURI__.event.listen
+                    };
+                    
+                    updateDebugInfo('✓ Tauri APIs loaded successfully');
+                    console.log('Tauri APIs initialized:', tauriAPI);
+                    
+                    // Set up event listeners
+                    setupEventListeners();
+                    return true;
+                } else {
+                    throw new Error('Tauri APIs not available');
+                }
+            } catch (error) {
+                console.error('Failed to initialize Tauri APIs:', error);
+                updateDebugInfo('✗ Tauri APIs not available - ' + error.message);
+                setupFallbackMode();
+                return false;
+            }
+        }
+        
+        function updateDebugInfo(message) {
+            const debugElement = document.getElementById('debugInfo');
+            debugElement.textContent = message;
+            console.log('Debug:', message);
+        }
+        
+        function setupEventListeners() {
+            if (!tauriAPI) return;
+            
+            // Listen for archive selection from the main process
+            tauriAPI.listen('archives-selected', (event) => {
+                console.log('Received archives-selected event:', event);
+                console.log('Event payload type:', typeof event.payload);
+                console.log('Event payload content:', event.payload);
+                
+                // Ensure we handle the payload correctly
+                if (Array.isArray(event.payload)) {
+                    selectedArchives = event.payload;
+                } else if (event.payload && Array.isArray(event.payload.files)) {
+                    selectedArchives = event.payload.files;
+                } else {
+                    console.warn('Unexpected payload format:', event.payload);
+                    selectedArchives = [];
+                }
+                
+                console.log('Selected archives set to:', selectedArchives);
+                console.log('Number of archives:', selectedArchives.length);
+                
+                updateDebugInfo(`✓ Ready to extract ${selectedArchives.length} archive(s)`);
+                displayArchives();
+                updateUI();
+            });
+            
+            // Listen for decompression progress updates
+            tauriAPI.listen('compression-progress', (event) => {
+                console.log('Progress update:', event.payload);
+                updateProgress(event.payload);
+            });
+        }
+        
+        function setupFallbackMode() {
+            // For testing outside Tauri context
+            updateDebugInfo('Running in fallback mode (for testing)');
+            selectedArchives = ['test-archive.zip', 'another-archive.tar.gz', 'third-archive.7z'];
+            displayArchives();
+            updateUI();
+        }
+        
+        function displayArchives() {
+            console.log('Displaying archives:', selectedArchives);
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
+            
+            if (!selectedArchives || selectedArchives.length === 0) {
+                fileList.innerHTML = '<div class="file-item" style="color: #999;">No archives selected</div>';
+                return;
+            }
+            
+            // Add count header
+            const countHeader = document.createElement('div');
+            countHeader.className = 'file-count archive-count';
+            countHeader.textContent = `${selectedArchives.length} archive(s) selected:`;
+            fileList.appendChild(countHeader);
+            
+            selectedArchives.forEach((archive, index) => {
+                console.log(`Adding archive ${index}: ${archive}`);
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                
+                // Extract just the filename from the full path
+                const fileName = archive.split(/[/\\]/).pop();
+                fileItem.textContent = `${index + 1}. ${fileName}`;
+                fileItem.title = archive; // Show full path on hover
+                fileList.appendChild(fileItem);
+            });
+        }
+        
+        function updateUI() {
+            const startBtn = document.getElementById('startBtn');
+            const cancelBtn = document.getElementById('cancelBtn');
+            
+            if (isExtracting) {
+                startBtn.disabled = true;
+                startBtn.textContent = 'Extracting...';
+                cancelBtn.textContent = 'Cancel';
+                cancelBtn.className = 'btn-danger';
+                cancelBtn.disabled = false;
+            } else {
+                startBtn.disabled = !selectedArchives || selectedArchives.length === 0;
+                startBtn.textContent = 'Start Extraction';
+                cancelBtn.textContent = 'Cancel';
+                cancelBtn.className = 'btn-secondary';
+                cancelBtn.disabled = false;
+            }
+        }
+        
+        function updateProgress(progressData) {
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const statusText = document.getElementById('statusText');
+            
+            const percentage = Math.round(progressData.progress);
+            
+            // Update progress bar
+            progressFill.style.width = `${percentage}%`;
+            progressText.textContent = `${percentage}%`;
+            
+            // Update status text
+            if (progressData.progress >= 100) {
+                statusText.textContent = 'Extraction complete!';
+            } else if (progressData.current_file && progressData.current_file !== 'Complete') {
+                statusText.textContent = `Extracting: ${progressData.current_file} (${progressData.current_file_index}/${progressData.total_files})`;
+            } else {
+                statusText.textContent = `Processing archive ${progressData.current_file_index}/${progressData.total_files}`;
+            }
+        }
+        
+        // Set up UI event listeners
+        function setupUIEventListeners() {
+            // Start button click handler
+            document.getElementById('startBtn').addEventListener('click', startExtraction);
+            
+            // Cancel button click handler
+            document.getElementById('cancelBtn').addEventListener('click', cancelExtraction);
+            
+            console.log('UI event listeners set up');
+        }
+        
+        async function startExtraction() {
+            console.log('Starting extraction with archives:', selectedArchives);
+            
+            if (!selectedArchives || selectedArchives.length === 0) {
+                showMessage('No archives selected for extraction.', 'error');
+                return;
+            }
+            
+            if (!tauriAPI) {
+                showMessage('Tauri APIs not available - running in demo mode', 'error');
+                return;
+            }
+            
+            isExtracting = true;
+            operationCancelled = false;
+            updateUI();
+            hideMessage();
+            
+            // Reset progress
+            updateProgress({
+                progress: 0,
+                current_file: 'Starting...',
+                total_files: selectedArchives.length,
+                current_file_index: 0
+            });
+            
+            try {
+                console.log('Calling decompress_files_command with:', selectedArchives);
+                
+                const result = await tauriAPI.invoke('decompress_files_command', {
+                    files: selectedArchives
+                });
+                
+                console.log('Extraction result:', result);
+                
+                if (operationCancelled) {
+                    showMessage('Operation was cancelled. Any temporary files have been cleaned up.', 'error');
+                    isExtracting = false;
+                    updateUI();
+                    return;
+                }
+                
+                lastExtractedLocation = result;
+                
+                showMessage(result, 'success', true);
+                
+                // Auto-close after 3 seconds
+                setTimeout(() => {
+                    console.log('Auto-closing window after successful extraction');
+                    closeWindow();
+                }, 3000);
+                
+            } catch (error) {
+                console.error('Extraction error:', error);
+                
+                if (error.toString().includes('cancelled')) {
+                    showMessage('Operation was cancelled. Any temporary files have been cleaned up.', 'error');
+                } else {
+                    showMessage(`Extraction failed: ${error}`, 'error');
+                }
+                
+                isExtracting = false;
+                updateUI();
+            }
+        }
+        
+        function closeWindow() {
+            console.log('Attempting to close window...');
+            if (tauriAPI && tauriAPI.appWindow) {
+                try {
+                    tauriAPI.appWindow.close();
+                    console.log('Window close command sent');
+                } catch (error) {
+                    console.error('Error closing window:', error);
+                    // Fallback: try to close via window.close()
+                    window.close();
+                }
+            } else {
+                console.log('Tauri window API not available, trying window.close()');
+                window.close();
+            }
+        }
+        
+        async function cancelExtraction() {
+            console.log('Cancel button clicked');
+            
+            if (isExtracting) {
+                console.log('Requesting extraction cancellation...');
+                operationCancelled = true;
+                
+                try {
+                    if (tauriAPI) {
+                        await tauriAPI.invoke('cancel_operation');
+                        console.log('Cancellation request sent to backend');
+                    }
+                } catch (error) {
+                    console.error('Failed to send cancellation request:', error);
+                }
+                
+                // Update UI immediately
+                isExtracting = false;
+                updateUI();
+                showMessage('Extraction was cancelled. Any temporary files have been cleaned up.', 'error');
+            } else {
+                closeWindow();
+            }
+        }
+        
+        function showMessage(message, type, showFolderButton = false) {
+            const resultMessage = document.getElementById('resultMessage');
+            resultMessage.innerHTML = ''; // Clear previous content
+            resultMessage.className = `${type}-message`;
+            
+            const messageSpan = document.createElement('span');
+            messageSpan.textContent = message;
+            resultMessage.appendChild(messageSpan);
+            
+            if (showFolderButton && lastExtractedLocation && tauriAPI) {
+                const folderBtn = document.createElement('button');
+                folderBtn.textContent = 'Show in Folder';
+                folderBtn.className = 'show-folder-btn';
+                folderBtn.addEventListener('click', async () => {
+                    try {
+                        // Extract the first directory path from the result message
+                        const pathMatch = lastExtractedLocation.match(/to: (.+?)(?:\s|$)/);
+                        if (pathMatch) {
+                            await tauriAPI.invoke('open_file_location', pathMatch[1]);
+                        }
+                    } catch (error) {
+                        console.error('Failed to open file location:', error);
+                    }
+                });
+                resultMessage.appendChild(folderBtn);
+            }
+            
+            resultMessage.classList.remove('hidden');
+        }
+        
+        function hideMessage() {
+            const resultMessage = document.getElementById('resultMessage');
+            resultMessage.classList.add('hidden');
+        }
+        
+        // Initialize everything when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, initializing decompression interface...');
+            
+            // Set up UI event listeners first
+            setupUIEventListeners();
+            
+            // Try to initialize Tauri APIs
+            const success = initializeTauriAPIs();
+            
+            if (!success) {
+                // If Tauri APIs aren't available, set up a demo mode
+                setTimeout(() => {
+                    console.log('Setting up demo mode...');
+                    setupFallbackMode();
+                }, 1000);
+            }
+            
+            // Initialize display regardless
+            displayArchives();
+            updateUI();
+        });
+        
+        // Also try initialization on window load as a fallback
+        window.addEventListener('load', () => {
+            if (!tauriAPI) {
+                console.log('Retrying Tauri API initialization...');
+                initializeTauriAPIs();
+            }
+        });
+    </script>
+</body>
+</html>
