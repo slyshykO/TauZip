@@ -914,14 +914,9 @@
                 operationCancelled = true;
                 
                 try {
-                    if (tauriAPI) {
-						if (multiple_instance) {
-							await tauriAPI.invoke('close_all');
-							return;
-						} else {
-							await tauriAPI.invoke('cancel_operation');
-							console.log('Cancellation request sent to backend');
-						}
+                    if (tauriAPI) {						
+						await tauriAPI.invoke('cancel_operation');
+						console.log('Cancellation request sent to backend');
                     }
                 } catch (error) {
                     console.error('Failed to send cancellation request:', error);
@@ -943,11 +938,7 @@
                     showStatus('Compression was cancelled.', 'error');
                 }
             } else {
-				if (multiple_instance) {
-					await tauriAPI.invoke('close_all');
-				} else {
-					closeWindow();
-				}
+				closeWindow();
             }
         }
         
