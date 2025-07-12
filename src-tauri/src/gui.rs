@@ -328,6 +328,7 @@ pub fn run_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<String
 			count = window.fetch_add(0, Ordering::SeqCst);
 			thread::sleep(Duration::from_millis(100));
 		}
+		thread::sleep(Duration::from_millis(500));
 		
 		match app2.emit("files-selected", file_strings2) {
 			Ok(_) => {
@@ -360,6 +361,10 @@ pub fn run_decom_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<
 			count = window.fetch_add(0, Ordering::SeqCst);
 			thread::sleep(Duration::from_millis(100));
 		}
+		count = window.fetch_add(0, Ordering::SeqCst);
+		//if count <= 0 {
+		thread::sleep(Duration::from_millis(500));
+		//}
 		
 		match app2.emit("set-mode", "decompression") {
 			Ok(_) => println!("Successfully set decompression mode"),
