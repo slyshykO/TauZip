@@ -330,6 +330,7 @@
         let isCompressing = false;
         let currentMode = 'compression'; // 'compression' or 'decompression'
         let operationCancelled = false;
+		let multiple_instance = false;
         
         // Initialize Tauri APIs with proper error handling
         function initializeTauriAPIs() {
@@ -779,9 +780,13 @@
                 
                 // Extract file path from result message
                 const pathMatch = result.match(/Files compressed successfully to: (.+)$/);
-                if (pathMatch) {
+                if (pathMatch && multiple_instance == false) {
                     lastCompressedFile = pathMatch[1];
-                }
+                } else {
+					showStatus('Multiple Instance of Apps is detected.', 'error');
+					multiple_instance = true;
+					return;
+				}
                 
                 // Hide progress bar and show result
                 compressionForm.forEach(el => el.style.display = 'block');
@@ -910,8 +915,13 @@
                 
                 try {
                     if (tauriAPI) {
-                        await tauriAPI.invoke('cancel_operation');
-                        console.log('Cancellation request sent to backend');
+						if (multiple_instance) {
+							await tauriAPI.invoke('close_all');
+							return;
+						} else {
+							await tauriAPI.invoke('cancel_operation');
+							console.log('Cancellation request sent to backend');
+						}
                     }
                 } catch (error) {
                     console.error('Failed to send cancellation request:', error);
