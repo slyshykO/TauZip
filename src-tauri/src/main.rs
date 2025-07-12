@@ -21,6 +21,7 @@ mod gui;
 use compression::{compress_files, decompress_files, CompressionType, is_compressed_file};
 use context_menu::ContextMenuManager;
 use tauri::{Manager, AppHandle};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct FileCollectionSession {
@@ -34,16 +35,17 @@ const SESSION_FILE_PREFIX: &str = "tauzip_session_";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+	let window_count: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(0));
 	let ars = std::env::args().into_iter().collect::<Vec<String>>();
 	if ars.len() > 2 && ars[1].to_string().to_lowercase() == "gui-compress".to_string() {
 		let args: Vec<String> = std::env::args().into_iter().skip(2).collect::<Vec<String>>();
 	
-		gui::run_compression_dialog(args, vec![]).await?;
+		gui::run_compression_dialog(args, vec![], window_count.clone()).await?;
 		return Ok(());
 	} else if ars.len() > 2 && ars[1].to_string().to_lowercase() == "gui-decompress".to_string() {
 		let args: Vec<String> = std::env::args().into_iter().skip(2).collect::<Vec<String>>();
 	
-		gui::run_decompression_dialog(args, vec![]).await?;
+		gui::run_decompression_dialog(args, vec![], window_count.clone()).await?;
 		return Ok(());
 	}
 	
@@ -264,7 +266,7 @@ async fn main() -> anyhow::Result<()> {
 				
 			let mut files2 = files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>();
             
-            let x = gui::run_compression_dialog(files2, files).await?;
+            let x = gui::run_compression_dialog(files2, files, window_count.clone()).await?;
 			 
         },
         Some(("gui-decompress", sub_matches)) => {
@@ -296,7 +298,7 @@ async fn main() -> anyhow::Result<()> {
                 // return Ok(());
             // }
             
-            let x = gui::run_decompression_dialog(files2.clone(), archive_files).await?;
+            let x = gui::run_decompression_dialog(files2.clone(), archive_files, window_count.clone()).await?;
 			 
         },
 		Some(("gui-compress-multiple", sub_matches)) => {
@@ -319,7 +321,7 @@ async fn main() -> anyhow::Result<()> {
 			
 			// For multiple files from %V, we can skip the aggregation logic
 			// since Windows already collected them for us
-			let x = gui::run_compression_dialog(files2, files).await?;
+			let x = gui::run_compression_dialog(files2, files, window_count.clone()).await?;
 		},
 		Some(("gui-decompress-multiple", sub_matches)) => {
 			let files: Vec<PathBuf> = sub_matches.get_many::<PathBuf>("files")
@@ -360,7 +362,7 @@ async fn main() -> anyhow::Result<()> {
 				return Ok(());
 			}
 			
-			let x = gui::run_decompression_dialog(files2, archive_files).await?;
+			let x = gui::run_decompression_dialog(files2, archive_files, window_count.clone()).await?;
 		},
         Some(("gui-compress-selection", _)) => {
             println!("GUI Compress Selection - attempting to get selected files from Explorer...");
@@ -375,7 +377,7 @@ async fn main() -> anyhow::Result<()> {
                         println!("  {}: {}", i + 1, file.display());
                     }
 					let mut files2 = selected_files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>();
-                    let x = gui::run_compression_dialog(files2, selected_files).await?;
+                    let x = gui::run_compression_dialog(files2, selected_files, window_count.clone()).await?;
 					 
                 } else {
                     eprintln!("No files are currently selected in Explorer.");
@@ -418,7 +420,7 @@ async fn main() -> anyhow::Result<()> {
             }
             
             println!("Found {} archive file(s) to decompress.", archive_files.len());
-            let x = gui::run_decompression_dialog(files2, archive_files).await?;
+            let x = gui::run_decompression_dialog(files2, archive_files, window_count.clone()).await?;
 			 
         },
         Some(("test", _)) => {
@@ -466,7 +468,7 @@ async fn main() -> anyhow::Result<()> {
                 std::env::current_exe()?,  // Use the executable itself as a test file
             ];
 			let files2 = vec![std::env::current_exe()?.display().to_string()];
-            let x = gui::run_compression_dialog(files2, sample_files).await?;
+            let x = gui::run_compression_dialog(files2, sample_files, window_count.clone()).await?;
 			 
         },
         Some(("debug", sub_matches)) => {
@@ -500,7 +502,7 @@ async fn main() -> anyhow::Result<()> {
             cleanup_old_sessions().await?;
             
             println!("\nTesting GUI with sample files...");
-            let x = gui::run_compression_dialog(files2, test_files).await?;
+            let x = gui::run_compression_dialog(files2, test_files, window_count.clone()).await?;
 			 
         },
         Some(("open", sub_matches)) => {

@@ -8,8 +8,10 @@ use std::sync::{Arc, Mutex};
 use tauri::{Manager, App, AppHandle, generate_context, WebviewWindow, Emitter, Runtime, Window, Listener};
 use serde::{Serialize, Deserialize};
 use serde_json::Value;
+use std::sync::atomic::{AtomicUsize, Ordering};
 //use tauri_plugin_cli::CliExt;
 //use tauri_plugin_shell::ShellExt;
+use sysinfo::{System, Process, Signal};
 
 #[derive(Clone, Serialize)]
 pub struct CompressionProgressUpdate {
@@ -20,16 +22,51 @@ pub struct CompressionProgressUpdate {
     operation: String, // "compressing" or "extracting"
 }
 
+fn count_processes_by_name(name: &str) -> usize {
+    let mut sys = System::new_all();
+    sys.refresh_processes();
+
+    sys.processes()
+        .values()
+        .filter(|proc| proc.name().eq_ignore_ascii_case(name))
+        .count()
+}
+
+fn kill_processes_by_name(name: &str) {
+    let mut sys = System::new_all();
+    sys.refresh_processes();
+
+    for process in sys.processes().values() {
+        if process.name().eq_ignore_ascii_case(name) {
+            println!("Killing process: {} (PID: {})", process.name(), process.pid());
+            let _ = process.kill_with(Signal::Kill); // or Signal::Term
+        }
+    }
+}
+
+
+#[tauri::command]
+async fn close_all() {
+	kill_processes_by_name("TauZip.exe");
+}
+
 #[tauri::command]
 async fn compress_files_command(
     window: tauri::Window,
     files: Vec<String>, 
     outputfile: String, 
-    compressiontype: String
+    compressiontype: String,
+	state: tauri::State<'_, Arc<AtomicUsize>>
 ) -> Result<String, String> {
     println!("Compression request received - files: {:?}, output: {}, type: {}", 
              files, outputfile, compressiontype);
     
+	// let current = state.fetch_add(0, Ordering::SeqCst);
+	let count = count_processes_by_name("TauZip.exe");
+	if count > 1 {
+		return Err("multiple instance of apps detected".to_string());
+	}
+	
     // Convert string to CompressionType enum
     let compression_enum = match compressiontype.as_str() {
         "Zip" => CompressionType::Zip,
@@ -330,7 +367,7 @@ pub fn run_decom_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<
 	});
 }
 
-pub async fn run_compression_dialog(file_strings: Vec<String>, files: Vec<PathBuf>) -> Result<()> {
+pub async fn run_compression_dialog(file_strings: Vec<String>, files: Vec<PathBuf>, window_count: Arc<AtomicUsize>) -> Result<()> {
     println!("Starting Tauri compression app with {} files", files.len());
     
 	let log = false;
@@ -338,6 +375,7 @@ pub async fn run_compression_dialog(file_strings: Vec<String>, files: Vec<PathBu
 	let file_strings2b = file_strings.clone();
     if log { std::fs::write("a.txt", "before"); }
 	
+	let window_count_clone = window_count.clone();
 	tauri::Builder::default()
 		.invoke_handler(tauri::generate_handler![
             compress_files_command,
@@ -346,16 +384,18 @@ pub async fn run_compression_dialog(file_strings: Vec<String>, files: Vec<PathBu
             open_file_location,
 			close
         ])
+		.manage(window_count_clone.clone()) // store it in Tauri state
 		//.plugin(tauri_plugin_shell::init())
 		//.plugin(tauri_plugin_cli::init())
         .plugin(tauri_plugin_single_instance::init(move |app, argv, _cwd| {
-			println!("Tauri compression app setup started");
+			//println!("Tauri compression app setup started");
 			if log { std::fs::write("abc.txt", format!("{:?}", argv.clone())); }
             run_app(app, file_strings2.clone(), argv.clone());
 			
 			//return Ok(());
 		}))
 		.setup(move |app| {
+			let count = window_count_clone.fetch_add(1, Ordering::SeqCst);
 			if let Some(window) = app.get_webview_window("main") {
 				let _ = window.center();
 			}
@@ -374,25 +414,29 @@ pub async fn run_compression_dialog(file_strings: Vec<String>, files: Vec<PathBu
 	Ok(())
 }
 
-pub async fn run_decompression_dialog(file_strings: Vec<String>, files: Vec<PathBuf>) -> Result<()> {
+pub async fn run_decompression_dialog(file_strings: Vec<String>, files: Vec<PathBuf>, window_count: Arc<AtomicUsize>) -> Result<()> {
     println!("Starting Tauri decompression app with {} files", files.len());
     
 	let log = false;
     let file_strings2 = file_strings.clone();
 	let file_strings2b = file_strings.clone();
 	
+	let window_count_clone = window_count.clone();
 	tauri::Builder::default()
 		.invoke_handler(tauri::generate_handler![
             decompress_files_command,
             open_file_location,
 			close
         ])
+		.manage(window_count_clone.clone()) // store it in Tauri state
 		//.plugin(tauri_plugin_shell::init())
 		//.plugin(tauri_plugin_cli::init())
         .plugin(tauri_plugin_single_instance::init(move |app, argv, _cwd| {
+			if log { std::fs::write("def.txt", format!("{:?}", argv.clone())); }
 			run_decom_app(app, file_strings2.clone(), argv.clone());
         }))
 		.setup(move |app| {
+			let count = window_count_clone.fetch_add(1, Ordering::SeqCst);
 			if let Some(window) = app.get_webview_window("main") {
 				let _ = window.center();
 			}
