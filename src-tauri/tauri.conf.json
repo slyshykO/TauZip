@@ -1,0 +1,50 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "TauZip",
+  "version": "0.1.0",
+  "identifier": "com.tauzip.dev",
+  "build": {
+    "frontendDist": "../dist"
+  },
+  "plugins": {
+    "cli": {
+      "description": "tauzip",
+      "args": [
+        {
+          "name": "files",
+          "description": "Files to open",
+          "takesValue": true,
+          "multiple": true
+        }
+      ]
+    }
+  },
+  "app": { 
+    "withGlobalTauri": true,
+    "windows": [
+      {
+		"label": "main",
+        "title": "TauZip",
+        "width": 540,
+        "height": 330,
+        "resizable": true,
+        "fullscreen": false,
+		"url": "index.html"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' ipc.localhost; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';",
+	  "dangerousDisableAssetCspModification": true
+	}
+  }, 
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/Original.png",
+      "icons/512x512.png",
+      "icons/icon.ico"
+    ]
+  }
+}
+
