@@ -249,6 +249,11 @@ fn get_file_args(state: tauri::State<'_, Arc<Mutex<Vec<String>>>>) -> Vec<String
 
 #[tauri::command]
 fn close(app: tauri::AppHandle) -> Result<(), String> {
+	let count = count_processes_by_name("TauZip.exe");
+	if count > 1 {
+		kill_processes_by_name("TauZip.exe");
+		return Ok(());
+	}
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.close(); // or .unwrap() if you want to panic on error
 		return Ok(());
