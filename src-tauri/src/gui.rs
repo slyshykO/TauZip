@@ -5,11 +5,11 @@ use std::path::{PathBuf, Path};
 use std::thread;
 use std::time::Duration;
 use std::sync::{Arc, Mutex};
-use tauri::{Manager, Wry, App, AppHandle, generate_context, WebviewWindow, Emitter, Runtime, Window, Listener};
+use tauri::{Manager, App, AppHandle, generate_context, WebviewWindow, Emitter, Runtime, Window, Listener};
 use serde::{Serialize, Deserialize};
-use tauri_plugin_cli::CliExt;
 use serde_json::Value;
-use tauri_plugin_shell::ShellExt;
+//use tauri_plugin_cli::CliExt;
+//use tauri_plugin_shell::ShellExt;
 
 #[derive(Clone, Serialize)]
 pub struct CompressionProgressUpdate {
@@ -270,112 +270,62 @@ async fn open_file_location(file_path: String) -> Result<(), String> {
     Ok(())
 }
 
-pub fn run_app(app: &AppHandle, file_strings2: Vec<String>, argv: Vec<String>) {
+pub fn run_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<String>) {
 	let log = false;
 	if log { std::fs::write("aa.txt", format!("run_app")); }
 	
-	let mut file_strings3 = file_strings2.clone();
-	
 	let file_args: Vec<String> = argv.into_iter().skip(2).collect();
-	let file_strings4 = file_args.clone();
-	let file_paths: Vec<PathBuf> = file_args.iter().map(PathBuf::from).collect();
+	file_strings2.extend(file_args);
 	
-	if log { std::fs::write("aa.txt", format!("file_args {:?}", file_strings4)); }
+	if log { std::fs::write("aa.txt", format!("file_strings2 {:?}", file_strings2)); }
 	
-	let appx = Arc::new(Mutex::new(app.clone()));
+	let app2 = app.clone();
 	tokio::spawn(async move {
-		thread::sleep(Duration::from_millis(1500));
+		thread::sleep(Duration::from_millis(1000));
 		
-		let app2 = appx.lock().unwrap();
-		let cs = file_strings3.clone();
-		for c in cs {
-			match app2.emit("files-selected", c.clone()) {
-				Ok(_) => {
-					let s = Path::new(&c);
-					if log { std::fs::write(format!("aa {}.txt", s.file_name().unwrap().to_string_lossy()), format!("emit success {:?}", s)); }
-					println!("Successfully emitted files-selected event with {} files", file_strings3.len())
-				},
-				Err(e) => {
-					let s = Path::new(&c);
-					if log { std::fs::write(format!("aa {}.txt", s.file_name().unwrap().to_string_lossy()), format!("emit fail {:?}", file_strings4)); }
-					println!("Failed to emit files-selected event: {}", e)
-				},
-			}
-		}
-		
-		let cs2 = file_strings4.clone();
-		for c in cs2 {
-			match app2.emit("files-selected", c.clone()) {
-				Ok(_) => {
-					let s = Path::new(&c);
-					if log { std::fs::write(format!("ab {}.txt", s.file_name().unwrap().to_string_lossy()), format!("emit success {:?}", s)); }
-					println!("Successfully emitted files-selected event with {} files", file_strings3.len())
-				},
-				Err(e) => {
-					let s = Path::new(&c);
-					if log { std::fs::write(format!("ab {}.txt", s.file_name().unwrap().to_string_lossy()), format!("emit fail {:?}", file_strings4)); }
-					println!("Failed to emit files-selected event: {}", e)
-				},
-			}
+		match app2.emit("files-selected", file_strings2) {
+			Ok(_) => {
+				//let s = Path::new(&c);
+				//if log { std::fs::write(format!("aa {}.txt", s.file_name().unwrap().to_string_lossy()), format!("emit success {:?}", s)); }
+				//println!("Successfully emitted files-selected event with {} files", file_strings3.len())
+			},
+			Err(e) => {
+				//let s = Path::new(&c);
+				//if log { std::fs::write(format!("aa {}.txt", s.file_name().unwrap().to_string_lossy()), format!("emit fail {:?}", file_strings4)); }
+				//println!("Failed to emit files-selected event: {}", e)
+			},
 		}
 	});
 }
 
-pub fn run_decom_app(app: &AppHandle, file_strings: Vec<String>, argv: Vec<String>) {
+pub fn run_decom_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<String>) {
 	let log = false;
 	if log { std::fs::write("aa.txt", "got main decom"); }
 		
-	let file_strings2 = file_strings.clone();
-	let file_strings2b = file_strings2.clone();
-		
-	let file_strings3 = file_strings2.clone();
-	if log { std::fs::write("b.txt", format!("file decom 3 {:?}", &file_strings3)); }
-	
 	let file_args: Vec<String> = argv.into_iter().skip(2).collect();
-	let file_strings4 = file_args.clone();
-	let file_paths: Vec<PathBuf> = file_args.iter().map(PathBuf::from).collect();
-
-	let appx = Arc::new(Mutex::new(app.clone()));
-	tokio::spawn(async move {
-		println!("Setting decompression mode and emitting archives-selected event...");
-		thread::sleep(Duration::from_millis(1500));
+	file_strings2.extend(file_args);
 		
-		let app2 = appx.lock().unwrap();
+	if log { std::fs::write("b.txt", format!("file_strings2 decom 3 {:?}", &file_strings2)); }
+	
+	let app2 = app.clone();
+	tokio::spawn(async move {
+		thread::sleep(Duration::from_millis(1000));
 		
 		match app2.emit("set-mode", "decompression") {
 			Ok(_) => println!("Successfully set decompression mode"),
 			Err(e) => println!("Failed to set decompression mode: {}", e),
 		}
-		let cs = file_strings3.clone();
-		for c in cs {
-			match app2.emit("archives-selected", c.clone()) {
-				Ok(_) => {
-					let s = Path::new(&c);
-					if log { std::fs::write(format!("ba {}.txt", s.file_name().unwrap().to_string_lossy()), format!("emit decom success {:?}", s)); }
-					println!("Successfully emitted files-selected event with {} files", file_strings3.len())
-				},
-				Err(e) => {
-					let s = Path::new(&c);
-					if log { std::fs::write(format!("ba {}.txt", s.file_name().unwrap().to_string_lossy()), format!("emit decom fail {:?}", file_strings4)); }
-					println!("Failed to emit files-selected event: {}", e)
-				},
-			}
-		}
-		
-		let cs2 = file_strings4.clone();
-		for c in cs2 {
-			match app2.emit("archives-selected", c.clone()) {
-				Ok(_) => {
-					let s = Path::new(&c);
-					if log { std::fs::write(format!("bb {}.txt", s.file_name().unwrap().to_string_lossy()), format!("emit decom success {:?}", s)); }
-					println!("Successfully emitted files-selected event with {} files", file_strings3.len())
-				},
-				Err(e) => {
-					let s = Path::new(&c);
-					if log { std::fs::write(format!("bb {}.txt", s.file_name().unwrap().to_string_lossy()), format!("emit decom fail {:?}", file_strings4)); }
-					println!("Failed to emit files-selected event: {}", e)
-				},
-			}
+		match app2.emit("archives-selected", file_strings2) {
+			Ok(_) => {
+				//let s = Path::new(&c);
+				//if log { std::fs::write(format!("ba {}.txt", s.file_name().unwrap().to_string_lossy()), format!("emit decom success {:?}", s)); }
+				//println!("Successfully emitted files-selected event with {} files", file_strings3.len())
+			},
+			Err(e) => {
+				//let s = Path::new(&c);
+				//if log { std::fs::write(format!("ba {}.txt", s.file_name().unwrap().to_string_lossy()), format!("emit decom fail {:?}", file_strings4)); }
+				//println!("Failed to emit files-selected event: {}", e)
+			},
 		}
 	});
 }
@@ -396,8 +346,8 @@ pub async fn run_compression_dialog(file_strings: Vec<String>, files: Vec<PathBu
             open_file_location,
 			close
         ])
-		.plugin(tauri_plugin_shell::init())
-		.plugin(tauri_plugin_cli::init())
+		//.plugin(tauri_plugin_shell::init())
+		//.plugin(tauri_plugin_cli::init())
         .plugin(tauri_plugin_single_instance::init(move |app, argv, _cwd| {
 			println!("Tauri compression app setup started");
 			if log { std::fs::write("abc.txt", format!("{:?}", argv.clone())); }
@@ -437,8 +387,8 @@ pub async fn run_decompression_dialog(file_strings: Vec<String>, files: Vec<Path
             open_file_location,
 			close
         ])
-		.plugin(tauri_plugin_shell::init())
-		.plugin(tauri_plugin_cli::init())
+		//.plugin(tauri_plugin_shell::init())
+		//.plugin(tauri_plugin_cli::init())
         .plugin(tauri_plugin_single_instance::init(move |app, argv, _cwd| {
 			run_decom_app(app, file_strings2.clone(), argv.clone());
         }))

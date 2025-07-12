@@ -41,7 +41,6 @@
     "active": true,
     "targets": "all",
     "icon": [
-      "icons/Original.png",
       "icons/512x512.png",
       "icons/icon.ico"
     ]

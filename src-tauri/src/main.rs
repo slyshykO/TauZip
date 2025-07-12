@@ -34,6 +34,19 @@ const SESSION_FILE_PREFIX: &str = "tauzip_session_";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+	let ars = std::env::args().into_iter().collect::<Vec<String>>();
+	if ars.len() > 2 && ars[1].to_string().to_lowercase() == "gui-compress".to_string() {
+		let args: Vec<String> = std::env::args().into_iter().skip(2).collect::<Vec<String>>();
+	
+		gui::run_compression_dialog(args, vec![]).await?;
+		return Ok(());
+	} else if ars.len() > 2 && ars[1].to_string().to_lowercase() == "gui-decompress".to_string() {
+		let args: Vec<String> = std::env::args().into_iter().skip(2).collect::<Vec<String>>();
+	
+		gui::run_decompression_dialog(args, vec![]).await?;
+		return Ok(());
+	}
+	
     let matches = Command::new("tauzip")
         .version("0.1.0")
         .about("Cross-platform compression utility with context menu integration")
@@ -165,6 +178,7 @@ async fn main() -> anyhow::Result<()> {
                 .unwrap()
                 .cloned()
                 .collect();
+				
             // For CLI compression, default to zip
             let output_path = generate_output_path(&files, CompressionType::Zip);
             compress_files(&files, &output_path, CompressionType::Zip).await?;
@@ -217,15 +231,7 @@ async fn main() -> anyhow::Result<()> {
                     }
                 }
             }
-			let mut files2 = vec![];
-			let mut skip = 0; //program.exe gui-compress
-			for x in &archive_files {
-				if skip <= 0 {
-					files2.push(x.display().to_string());
-				} else {
-					skip -= 1;
-				}
-			}
+			let mut files2 = archive_files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>();
             
             if archive_files.is_empty() {
                 println!("No supported archive files found in the directory.");
@@ -256,26 +262,8 @@ async fn main() -> anyhow::Result<()> {
                 .cloned()
                 .collect();
 				
-			let mut files2 = vec![];
-			let mut skip = 0; //program.exe gui-compress
-			for x in &files {
-				if skip <= 0 {
-					files2.push(x.display().to_string());
-				} else {
-					skip -= 1;
-				}
-			}
+			let mut files2 = files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>();
             
-            println!("gui compress called with {} files:", files.len());
-            for (i, file) in files.iter().enumerate() {
-                println!("  {}: {}", i + 1, file.display());
-            }
-            
-            if files.is_empty() {
-                println!("warning: no files provided!");
-                return Ok(());
-            }
-            println!("{:?} {:?}", files2, files);
             let x = gui::run_compression_dialog(files2, files).await?;
 			 
         },
@@ -284,27 +272,7 @@ async fn main() -> anyhow::Result<()> {
                 .unwrap()
                 .cloned()
                 .collect();
-			
-			let mut files2 = vec![];
-			let mut skip = 0; //program.exe gui-compress
-			for x in &files {
-				if skip <= 0 {
-					files2.push(x.display().to_string());
-				} else {
-					skip -= 1;
-				}
-			}
-            
-            println!("GUI Decompress called with {} files:", files.len());
-            for (i, file) in files.iter().enumerate() {
-                println!("  {}: {}", i + 1, file.display());
-            }
-            
-            if files.is_empty() {
-                println!("Warning: No files provided!");
-                return Ok(());
-            }
-            
+			            
             // Filter to only include valid archive files
             let archive_files: Vec<PathBuf> = files.into_iter()
                 .filter(|file| {
@@ -320,21 +288,13 @@ async fn main() -> anyhow::Result<()> {
                 })
                 .collect();
 				
-            let mut files2 = vec![];
-			let mut skip = 0; //program.exe gui-compress
-			for x in &archive_files {
-				if skip <= 0 {
-					files2.push(x.display().to_string());
-				} else {
-					skip -= 1;
-				}
-			}
+            let mut files2 = archive_files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>();
 			
-            if archive_files.is_empty() {
-                eprintln!("Error: No valid archive files found.");
-                eprintln!("Supported formats: .zip, .rar, .gz, .bz2, .tar, .7z, .gzip, .br, .tgz, .tar.gz, .tar.br");
-                return Ok(());
-            }
+            // if archive_files.is_empty() {
+                // eprintln!("Error: No valid archive files found.");
+                // eprintln!("Supported formats: .zip, .rar, .gz, .bz2, .tar, .7z, .gzip, .br, .tgz, .tar.gz, .tar.br");
+                // return Ok(());
+            // }
             
             let x = gui::run_decompression_dialog(files2.clone(), archive_files).await?;
 			 
@@ -344,26 +304,18 @@ async fn main() -> anyhow::Result<()> {
 				.unwrap()
 				.cloned()
 				.collect();
+				
+			let mut files2 = files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>();
 			
-			let mut files2 = vec![];
-			let mut skip = 0; //program.exe gui-compress
-			for x in &files {
-				if skip <= 0 {
-					files2.push(x.display().to_string());
-				} else {
-					skip -= 1;
-				}
-			}
+			// println!("GUI Compress Multiple called with {} files:", files.len());
+			// for (i, file) in files.iter().enumerate() {
+				// println!("  {}: {}", i + 1, file.display());
+			// }
 			
-			println!("GUI Compress Multiple called with {} files:", files.len());
-			for (i, file) in files.iter().enumerate() {
-				println!("  {}: {}", i + 1, file.display());
-			}
-			
-			if files.is_empty() {
-				println!("Warning: No files provided!");
-				return Ok(());
-			}
+			// if files.is_empty() {
+				// println!("Warning: No files provided!");
+				// return Ok(());
+			// }
 			
 			// For multiple files from %V, we can skip the aggregation logic
 			// since Windows already collected them for us
@@ -375,25 +327,15 @@ async fn main() -> anyhow::Result<()> {
 				.cloned()
 				.collect();
 			
-			let mut files2 = vec![];
-			let mut skip = 0; //program.exe gui-compress
-			for x in &files {
-				if skip <= 0 {
-					files2.push(x.display().to_string());
-				} else {
-					skip -= 1;
-				}
-			}
+			// println!("GUI Decompress Multiple called with {} files:", files.len());
+			// for (i, file) in files.iter().enumerate() {
+				// println!("  {}: {}", i + 1, file.display());
+			// }
 			
-			println!("GUI Decompress Multiple called with {} files:", files.len());
-			for (i, file) in files.iter().enumerate() {
-				println!("  {}: {}", i + 1, file.display());
-			}
-			
-			if files.is_empty() {
-				println!("Warning: No files provided!");
-				return Ok(());
-			}
+			// if files.is_empty() {
+				// println!("Warning: No files provided!");
+				// return Ok(());
+			// }
 			
 			// Filter to only include valid archive files
 			let archive_files: Vec<PathBuf> = files.into_iter()
@@ -410,15 +352,7 @@ async fn main() -> anyhow::Result<()> {
 				})
 				.collect();
 				
-			let mut files2 = vec![];
-			let mut skip = 0; //program.exe gui-compress
-			for x in &archive_files {
-				if skip <= 0 {
-					files2.push(x.display().to_string());
-				} else {
-					skip -= 1;
-				}
-			}
+			let mut files2 = archive_files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>();
 			
 			if archive_files.is_empty() {
 				eprintln!("Error: No valid archive files found.");
@@ -440,15 +374,7 @@ async fn main() -> anyhow::Result<()> {
                     for (i, file) in selected_files.iter().enumerate() {
                         println!("  {}: {}", i + 1, file.display());
                     }
-					let mut files2 = vec![];
-					let mut skip = 0; //program.exe gui-compress
-					for x in &selected_files {
-						if skip <= 0 {
-							files2.push(x.display().to_string());
-						} else {
-							skip -= 1;
-						}
-					}
+					let mut files2 = selected_files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>();
                     let x = gui::run_compression_dialog(files2, selected_files).await?;
 					 
                 } else {
@@ -483,15 +409,7 @@ async fn main() -> anyhow::Result<()> {
                     }
                 }
             }
-			let mut files2 = vec![];
-			let mut skip = 0; //program.exe gui-compress
-			for x in &archive_files {
-				if skip <= 0 {
-					files2.push(x.display().to_string());
-				} else {
-					skip -= 1;
-				}
-			}
+			let mut files2 = archive_files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>();
             
             if archive_files.is_empty() {
                 eprintln!("Error: No supported archive files found in the directory.");
@@ -566,15 +484,7 @@ async fn main() -> anyhow::Result<()> {
             for (i, file) in test_files.iter().enumerate() {
                 println!("  {}: {} (exists: {})", i + 1, file.display(), file.exists());
             }
-			let mut files2 = vec![];
-			let mut skip = 0; //program.exe gui-compress
-			for x in &test_files {
-				if skip <= 0 {
-					files2.push(x.display().to_string());
-				} else {
-					skip -= 1;
-				}
-			}
+			let mut files2 = test_files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>();
             
             println!("\nChecking dist directory:");
             let dist_path = std::env::current_exe()?.parent().unwrap().join("../dist");
@@ -656,76 +566,76 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn handle_file_aggregation(file: PathBuf, operation: &str) -> anyhow::Result<Option<Vec<PathBuf>>> {
-    let current_time = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u64;
-    let temp_dir = std::env::temp_dir();
+// async fn handle_file_aggregation(file: PathBuf, operation: &str) -> anyhow::Result<Option<Vec<PathBuf>>> {
+    // let current_time = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u64;
+    // let temp_dir = std::env::temp_dir();
     
-    // Clean up old sessions first
-    cleanup_old_sessions().await?;
+    // // Clean up old sessions first
+    // cleanup_old_sessions().await?;
     
-    // Look for existing session within the timeout window
-    let mut existing_session_file = None;
-    let mut existing_session = None;
+    // // Look for existing session within the timeout window
+    // let mut existing_session_file = None;
+    // let mut existing_session = None;
     
-    if let Ok(entries) = std::fs::read_dir(&temp_dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
-                if filename.starts_with(SESSION_FILE_PREFIX) && filename.ends_with(&format!("_{}.json", operation)) {
-                    if let Ok(file_content) = std::fs::read_to_string(&path) {
-                        if let Ok(session) = serde_json::from_str::<FileCollectionSession>(&file_content) {
-                            if current_time - session.timestamp <= COLLECTION_TIMEOUT_MS {
-                                existing_session_file = Some(path);
-                                existing_session = Some(session);
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+    // if let Ok(entries) = std::fs::read_dir(&temp_dir) {
+        // for entry in entries.flatten() {
+            // let path = entry.path();
+            // if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
+                // if filename.starts_with(SESSION_FILE_PREFIX) && filename.ends_with(&format!("_{}.json", operation)) {
+                    // if let Ok(file_content) = std::fs::read_to_string(&path) {
+                        // if let Ok(session) = serde_json::from_str::<FileCollectionSession>(&file_content) {
+                            // if current_time - session.timestamp <= COLLECTION_TIMEOUT_MS {
+                                // existing_session_file = Some(path);
+                                // existing_session = Some(session);
+                                // break;
+                            // }
+                        // }
+                    // }
+                // }
+            // }
+        // }
+    // }
     
-    if let Some(mut session) = existing_session {
-        // Add this file to existing session
-        session.files.push(file);
-        session.timestamp = current_time;
+    // if let Some(mut session) = existing_session {
+        // // Add this file to existing session
+        // session.files.push(file);
+        // session.timestamp = current_time;
         
-        // Write back the updated session
-        if let Some(session_file) = existing_session_file {
-            let updated_content = serde_json::to_string(&session)?;
-            std::fs::write(session_file, updated_content)?;
-        }
+        // // Write back the updated session
+        // if let Some(session_file) = existing_session_file {
+            // let updated_content = serde_json::to_string(&session)?;
+            // std::fs::write(session_file, updated_content)?;
+        // }
         
-        // This instance should exit - another instance will handle the GUI
-        return Ok(None);
-    } else {
-        // Create new session
-        let session = FileCollectionSession {
-            timestamp: current_time,
-            files: vec![file],
-            operation: operation.to_string(),
-        };
+        // // This instance should exit - another instance will handle the GUI
+        // return Ok(None);
+    // } else {
+        // // Create new session
+        // let session = FileCollectionSession {
+            // timestamp: current_time,
+            // files: vec![file],
+            // operation: operation.to_string(),
+        // };
         
-        let session_filename = format!("{}{}_{}_{}.json", SESSION_FILE_PREFIX, current_time, std::process::id(), operation);
-        let session_path = temp_dir.join(session_filename);
+        // let session_filename = format!("{}{}_{}_{}.json", SESSION_FILE_PREFIX, current_time, std::process::id(), operation);
+        // let session_path = temp_dir.join(session_filename);
         
-        let session_content = serde_json::to_string(&session)?;
-        std::fs::write(&session_path, session_content)?;
+        // let session_content = serde_json::to_string(&session)?;
+        // std::fs::write(&session_path, session_content)?;
         
-        // Wait for the timeout period to collect more files
-        //tokio::time::sleep(Duration::from_millis(COLLECTION_TIMEOUT_MS)).await;
+        // // Wait for the timeout period to collect more files
+        // //tokio::time::sleep(Duration::from_millis(COLLECTION_TIMEOUT_MS)).await;
         
-        // Read the final session
-        let final_content = std::fs::read_to_string(&session_path)?;
-        let final_session: FileCollectionSession = serde_json::from_str(&final_content)?;
+        // // Read the final session
+        // let final_content = std::fs::read_to_string(&session_path)?;
+        // let final_session: FileCollectionSession = serde_json::from_str(&final_content)?;
         
-        // Clean up the session file
-        let _ = std::fs::remove_file(&session_path);
+        // // Clean up the session file
+        // let _ = std::fs::remove_file(&session_path);
         
-        return Ok(Some(final_session.files));
-    }
-}
+        // return Ok(Some(final_session.files));
+    // }
+// }
 
 async fn cleanup_old_sessions() -> anyhow::Result<()> {
     let current_time = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis() as u64;
