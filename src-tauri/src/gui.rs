@@ -250,15 +250,15 @@ fn get_file_args(state: tauri::State<'_, Arc<Mutex<Vec<String>>>>) -> Vec<String
 #[tauri::command]
 fn close(app: tauri::AppHandle) -> Result<(), String> {
 	let count = count_processes_by_name("TauZip.exe");
-	if count > 1 {
+	//if count > 1 {
 		kill_processes_by_name("TauZip.exe");
 		return Ok(());
-	}
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = window.close(); // or .unwrap() if you want to panic on error
-		return Ok(());
-    }
-	return Err("Unable to close window".to_string());
+	//}
+    //if let Some(window) = app.get_webview_window("main") {
+    //    let _ = window.close(); // or .unwrap() if you want to panic on error
+	//	return Ok(());
+    //}
+	//return Err("Unable to close window".to_string());
 }
 
 #[tauri::command]
@@ -323,7 +323,7 @@ pub fn run_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<String
 	
 	let app2 = app.clone();
 	tokio::spawn(async move {
-		thread::sleep(Duration::from_millis(1000));
+		thread::sleep(Duration::from_millis(1500));
 		
 		match app2.emit("files-selected", file_strings2) {
 			Ok(_) => {
@@ -351,7 +351,7 @@ pub fn run_decom_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<
 	
 	let app2 = app.clone();
 	tokio::spawn(async move {
-		thread::sleep(Duration::from_millis(1000));
+		thread::sleep(Duration::from_millis(1500));
 		
 		match app2.emit("set-mode", "decompression") {
 			Ok(_) => println!("Successfully set decompression mode"),
