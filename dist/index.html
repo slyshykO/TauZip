@@ -943,7 +943,11 @@
                     showStatus('Compression was cancelled.', 'error');
                 }
             } else {
-                closeWindow();
+				if (multiple_instance) {
+					await tauriAPI.invoke('close_all');
+				} else {
+					closeWindow();
+				}
             }
         }
         
