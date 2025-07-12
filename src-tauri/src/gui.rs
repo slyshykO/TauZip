@@ -312,7 +312,7 @@ async fn open_file_location(file_path: String) -> Result<(), String> {
     Ok(())
 }
 
-pub fn run_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<String>) {
+pub fn run_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<String>, window: Arc<AtomicUsize>) {
 	let log = false;
 	if log { std::fs::write("aa.txt", format!("run_app")); }
 	
@@ -323,7 +323,11 @@ pub fn run_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<String
 	
 	let app2 = app.clone();
 	tokio::spawn(async move {
-		thread::sleep(Duration::from_millis(1500));
+		let mut count = 0;
+		while count <= 0 {
+			count = window.fetch_add(0, Ordering::SeqCst);
+			thread::sleep(Duration::from_millis(100));
+		}
 		
 		match app2.emit("files-selected", file_strings2) {
 			Ok(_) => {
@@ -340,7 +344,7 @@ pub fn run_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<String
 	});
 }
 
-pub fn run_decom_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<String>) {
+pub fn run_decom_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<String>, window: Arc<AtomicUsize>) {
 	let log = false;
 	if log { std::fs::write("aa.txt", "got main decom"); }
 		
@@ -351,7 +355,11 @@ pub fn run_decom_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<
 	
 	let app2 = app.clone();
 	tokio::spawn(async move {
-		thread::sleep(Duration::from_millis(1500));
+		let mut count = 0;
+		while count <= 0 {
+			count = window.fetch_add(0, Ordering::SeqCst);
+			thread::sleep(Duration::from_millis(100));
+		}
 		
 		match app2.emit("set-mode", "decompression") {
 			Ok(_) => println!("Successfully set decompression mode"),
@@ -381,6 +389,8 @@ pub async fn run_compression_dialog(file_strings: Vec<String>, files: Vec<PathBu
     if log { std::fs::write("a.txt", "before"); }
 	
 	let window_count_clone = window_count.clone();
+	let window_count_clone2 = window_count.clone();
+	let window_count_clone3 = window_count.clone();
 	tauri::Builder::default()
 		.invoke_handler(tauri::generate_handler![
             compress_files_command,
@@ -395,12 +405,11 @@ pub async fn run_compression_dialog(file_strings: Vec<String>, files: Vec<PathBu
         .plugin(tauri_plugin_single_instance::init(move |app, argv, _cwd| {
 			//println!("Tauri compression app setup started");
 			if log { std::fs::write("abc.txt", format!("{:?}", argv.clone())); }
-            run_app(app, file_strings2.clone(), argv.clone());
-			
+            run_app(app, file_strings2.clone(), argv.clone(), window_count_clone.clone());			
 			//return Ok(());
 		}))
 		.setup(move |app| {
-			let count = window_count_clone.fetch_add(1, Ordering::SeqCst);
+			let count = window_count_clone3.fetch_add(1, Ordering::SeqCst);
 			if let Some(window) = app.get_webview_window("main") {
 				let _ = window.center();
 			}
@@ -408,7 +417,7 @@ pub async fn run_compression_dialog(file_strings: Vec<String>, files: Vec<PathBu
 			for x in files {
 				fb.push(x.display().to_string());
 			}
-			run_app(&app.app_handle(), file_strings2b.clone(), fb.clone() );
+			run_app(&app.app_handle(), file_strings2b.clone(), fb.clone(), window_count_clone2.clone() );
 			
 			return Ok(());
 		}
@@ -427,6 +436,8 @@ pub async fn run_decompression_dialog(file_strings: Vec<String>, files: Vec<Path
 	let file_strings2b = file_strings.clone();
 	
 	let window_count_clone = window_count.clone();
+	let window_count_clone2 = window_count.clone();
+	let window_count_clone3 = window_count.clone();
 	tauri::Builder::default()
 		.invoke_handler(tauri::generate_handler![
             decompress_files_command,
@@ -438,10 +449,10 @@ pub async fn run_decompression_dialog(file_strings: Vec<String>, files: Vec<Path
 		//.plugin(tauri_plugin_cli::init())
         .plugin(tauri_plugin_single_instance::init(move |app, argv, _cwd| {
 			if log { std::fs::write("def.txt", format!("{:?}", argv.clone())); }
-			run_decom_app(app, file_strings2.clone(), argv.clone());
+			run_decom_app(app, file_strings2.clone(), argv.clone(), window_count_clone.clone());
         }))
 		.setup(move |app| {
-			let count = window_count_clone.fetch_add(1, Ordering::SeqCst);
+			let count = window_count_clone3.fetch_add(1, Ordering::SeqCst);
 			if let Some(window) = app.get_webview_window("main") {
 				let _ = window.center();
 			}
@@ -449,7 +460,7 @@ pub async fn run_decompression_dialog(file_strings: Vec<String>, files: Vec<Path
 			for x in files {
 				fb.push(x.display().to_string());
 			}
-			run_decom_app(&app.app_handle(), file_strings2b.clone(), fb.clone());
+			run_decom_app(&app.app_handle(), file_strings2b.clone(), fb.clone(), window_count_clone2.clone());
 			
 			return Ok(());
 		}
