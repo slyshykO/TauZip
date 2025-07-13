@@ -312,7 +312,7 @@
         
         <div class="button-group">
             <button type="button" class="btn-secondary" id="cancelBtn">Cancel</button>
-            <button type="button" class="btn-primary compression-mode" id="compressBtn">OK</button>
+            <button type="button" class="btn-primary compression-mode" disabled="true" id="compressBtn">OK</button>
             <button type="button" class="btn-primary decompression-mode" id="startBtn">Start Extraction</button>
         </div>
         
@@ -375,7 +375,7 @@
             });
             
             // Listen for file selection from the main process (compression mode)
-            tauriAPI.listen('files-selected', (event) => {
+            tauriAPI.listen('files-selected', async (event) => {
                 console.log('Received files-selected event:', event);
                 console.log('Event payload type:', typeof event.payload);
                 console.log('Event payload content:', event.payload);
@@ -397,9 +397,15 @@
 				//);
 				// Append only new files
 				selectedFiles.push(...filteredFiles);
+				
+				const count_now = await tauriAPI.invoke('count_now', {
+                    count: selectedFiles.length
+                });
+			
                 console.log('Selected files set to:', selectedFiles);
                 console.log('Number of files:', selectedFiles.length);
-                
+                updateDebugInfo('Number of files:' + selectedFiles.length);
+				
                 updateDebugInfo(`✓ Received ${selectedFiles.length} files`);
                 displayFiles();
                 if (currentMode === 'compression') {
@@ -408,8 +414,16 @@
                 }
             });
             
+			tauriAPI.listen('enable-ok', (event) => {
+				document.getElementById("compressBtn").disabled = false; // Enable
+			});
+			
+			tauriAPI.listen('tauri://close-requested', () => {
+				closeWindow();
+			});
+			
             // Listen for archive selection from the main process (decompression mode)
-            tauriAPI.listen('archives-selected', (event) => {
+            tauriAPI.listen('archives-selected', async (event) => {
                 console.log('Received archives-selected event:', event);
                 console.log('Event payload type:', typeof event.payload);
                 console.log('Event payload content:', event.payload);
@@ -429,9 +443,15 @@
 				//	f !== "gui-decompress"
 				//);
                 selectedArchives.push(...filteredArchives);
+				
+				const count_now = await tauriAPI.invoke('count_now', {
+                    count: selectedArchives.length
+                });
+				
                 console.log('Selected archives set to:', selectedArchives);
                 console.log('Number of archives:', selectedArchives.length);
-                
+                updateDebugInfo('Number of files:' + selectedArchives.length);
+				
                 updateDebugInfo(`✓ Ready to extract ${selectedArchives.length} archive(s)`);
                 displayArchives();
                 updateDecompressionUI();
