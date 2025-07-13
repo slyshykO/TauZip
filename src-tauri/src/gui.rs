@@ -341,7 +341,7 @@ pub fn run_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<String
 	}
 	
 	thread::spawn(move || {
-		let mut count = window.fetch_add(0, Ordering::SeqCst);;
+		let mut count = window.fetch_add(0, Ordering::SeqCst);
 		while count <= 0 {
 			count = window.fetch_add(0, Ordering::SeqCst);
 			thread::sleep(Duration::from_millis(100));
@@ -517,8 +517,7 @@ pub async fn run_compression_dialog(file_strings: Vec<String>, files: Vec<PathBu
 						
 						let itemc = item_clone3.fetch_add(0, Ordering::SeqCst);
 						let total_arg = *arg_received_clone3.lock().unwrap();
-						if ((itemc == c && itemc != 0) || 
-							(total_arg == itemc && itemc != 0)){
+						if ((total_arg == itemc && itemc != 0)){
 							app3.emit("enable-ok", "");
 							break;
 						}
@@ -594,8 +593,7 @@ pub async fn run_decompression_dialog(file_strings: Vec<String>, files: Vec<Path
 						
 						let itemc = item_clone3.fetch_add(0, Ordering::SeqCst);
 						let total_arg = *arg_received_clone3.lock().unwrap();
-						if ((itemc == c && itemc != 0) || 
-							(total_arg == c && total_arg != 0)){
+						if ((total_arg == itemc && total_arg != 0)){
 							app3.emit("enable-ok", "");
 							break;
 						}
