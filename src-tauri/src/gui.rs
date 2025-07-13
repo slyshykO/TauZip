@@ -315,7 +315,7 @@ async fn open_file_location(file_path: String) -> Result<(), String> {
 }
 
 pub fn run_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<String>, gui_state: Arc<GuiState>) {
-	let log = true;
+	let log = false;
 	if log { std::fs::write("aa.txt", format!("run_app")); }
 	
 	let file_args: Vec<String> = argv.into_iter().skip(2).collect();
@@ -455,7 +455,7 @@ pub fn run_decom_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<
 pub async fn run_compression_dialog(file_strings: Vec<String>, files: Vec<PathBuf>, gui_state: Arc<GuiState>) -> Result<()> {
     println!("Starting Tauri compression app with {} files", files.len());
     
-	let log = true;
+	let log = false;
 	let file_strings2 = file_strings.clone();
 	let file_strings2b = file_strings.clone();
     if log { std::fs::write("a.txt", "before"); }
