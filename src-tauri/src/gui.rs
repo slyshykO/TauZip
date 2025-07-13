@@ -12,6 +12,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 //use tauri_plugin_cli::CliExt;
 //use tauri_plugin_shell::ShellExt;
 use sysinfo::{System, Process, Signal};
+use crate::GuiState;
 
 #[derive(Clone, Serialize)]
 pub struct CompressionProgressUpdate {
@@ -51,12 +52,18 @@ async fn close_all() {
 }
 
 #[tauri::command]
+async fn count_now(count: usize, state: tauri::State<'_, Arc<GuiState>>) -> Result<(), String> {
+	*state.count_now.lock().unwrap() = count;
+	return Ok(());
+}
+
+#[tauri::command]
 async fn compress_files_command(
     window: tauri::Window,
     files: Vec<String>, 
     outputfile: String, 
     compressiontype: String,
-	state: tauri::State<'_, Arc<AtomicUsize>>
+	state: tauri::State<'_, Arc<GuiState>>
 ) -> Result<String, String> {
     println!("Compression request received - files: {:?}, output: {}, type: {}", 
              files, outputfile, compressiontype);
@@ -243,11 +250,6 @@ async fn validate_compression_type(files: Vec<String>, compressiontype: String) 
 }
 
 #[tauri::command]
-fn get_file_args(state: tauri::State<'_, Arc<Mutex<Vec<String>>>>) -> Vec<String> {
-    state.lock().unwrap().clone()
-}
-
-#[tauri::command]
 fn close(app: tauri::AppHandle) -> Result<(), String> {
 	let count = count_processes_by_name("TauZip.exe");
 	//if count > 1 {
@@ -312,7 +314,7 @@ async fn open_file_location(file_path: String) -> Result<(), String> {
     Ok(())
 }
 
-pub fn run_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<String>, window: Arc<AtomicUsize>) {
+pub fn run_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<String>, gui_state: Arc<GuiState>) {
 	let log = false;
 	if log { std::fs::write("aa.txt", format!("run_app")); }
 	
@@ -321,17 +323,37 @@ pub fn run_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<String
 	
 	if log { std::fs::write("aa.txt", format!("file_strings2 {:?}", file_strings2)); }
 	
+	let c = *&file_strings2.len();
 	let app2 = app.clone();
-	tokio::spawn(async move {
-		let mut count = 0;
+	let app3 = app.clone();
+	let window = gui_state.window_count.clone();
+	let item2 = gui_state.item_count.clone();
+	let item3 = gui_state.item_count.clone();
+	let count_now_clone = gui_state.count_now.clone();
+	let count_now_clone2 = gui_state.count_now.clone();
+	let arg_received_clone = gui_state.arg_received.clone();
+	let arg_received_clone2 = gui_state.arg_received.clone();
+	let arg_received_clone3 = gui_state.arg_received.clone();
+	let mut total_arg = 0;
+	{
+		*arg_received_clone3.lock().unwrap() += c;
+		total_arg = *arg_received_clone3.lock().unwrap();
+	}
+	
+	thread::spawn(move || {
+		let mut count = window.fetch_add(0, Ordering::SeqCst);;
 		while count <= 0 {
 			count = window.fetch_add(0, Ordering::SeqCst);
 			thread::sleep(Duration::from_millis(100));
 		}
-		thread::sleep(Duration::from_millis(500));
+		count = window.fetch_add(0, Ordering::SeqCst);
+		if count <= 3 {
+			thread::sleep(Duration::from_millis(500));
+		}
 		
 		match app2.emit("files-selected", file_strings2) {
 			Ok(_) => {
+				item2.fetch_add(c, Ordering::SeqCst);
 				//let s = Path::new(&c);
 				//if log { std::fs::write(format!("aa {}.txt", s.file_name().unwrap().to_string_lossy()), format!("emit success {:?}", s)); }
 				//println!("Successfully emitted files-selected event with {} files", file_strings3.len())
@@ -342,10 +364,37 @@ pub fn run_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<String
 				//println!("Failed to emit files-selected event: {}", e)
 			},
 		}
+		// let mut count1 = item3.fetch_add(0, Ordering::SeqCst);
+		// while true {
+			// thread::sleep(Duration::from_millis(1200));
+			// let count2 = item3.fetch_add(0, Ordering::SeqCst);
+			// if count1 == count2 {
+				// app2.emit("enable-ok", "");
+				// break;
+			// }
+			// count1 = count2;
+		// }
 	});
+	
+	//if enable_thread 
+	// {
+		// thread::spawn(move || {
+			// while true {
+				// let mut c = 0;
+				// {
+					// c = *count_now_clone2.lock().unwrap();
+				// }
+				// thread::sleep(Duration::from_millis(1000));
+				// if total_arg == c {
+					// app3.emit("enable-ok", "");
+					// break;
+				// }
+			// }
+		// });
+	// }
 }
 
-pub fn run_decom_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<String>, window: Arc<AtomicUsize>) {
+pub fn run_decom_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<String>, gui_state: Arc<GuiState>) {
 	let log = false;
 	if log { std::fs::write("aa.txt", "got main decom"); }
 		
@@ -354,17 +403,33 @@ pub fn run_decom_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<
 		
 	if log { std::fs::write("b.txt", format!("file_strings2 decom 3 {:?}", &file_strings2)); }
 	
+	let c = *&file_strings2.len();
 	let app2 = app.clone();
-	tokio::spawn(async move {
-		let mut count = 0;
+	let app3 = app.clone();
+	let window = gui_state.window_count.clone();
+	let item2 = gui_state.item_count.clone();
+	let item3 = gui_state.item_count.clone();
+	let count_now_clone = gui_state.count_now.clone();
+	let count_now_clone2 = gui_state.count_now.clone();
+	let arg_received_clone = gui_state.arg_received.clone();
+	let arg_received_clone2 = gui_state.arg_received.clone();
+	let arg_received_clone3 = gui_state.arg_received.clone();
+	let mut total_arg = 0;
+	{
+		*arg_received_clone3.lock().unwrap() += c;
+		total_arg = *arg_received_clone3.lock().unwrap();
+	}
+	
+	thread::spawn(move || {
+		let mut count = window.fetch_add(0, Ordering::SeqCst);;
 		while count <= 0 {
 			count = window.fetch_add(0, Ordering::SeqCst);
 			thread::sleep(Duration::from_millis(100));
 		}
 		count = window.fetch_add(0, Ordering::SeqCst);
-		//if count <= 0 {
-		thread::sleep(Duration::from_millis(500));
-		//}
+		if count <= 3 {
+			thread::sleep(Duration::from_millis(500));
+		}
 		
 		match app2.emit("set-mode", "decompression") {
 			Ok(_) => println!("Successfully set decompression mode"),
@@ -372,6 +437,7 @@ pub fn run_decom_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<
 		}
 		match app2.emit("archives-selected", file_strings2) {
 			Ok(_) => {
+				item2.fetch_add(c, Ordering::SeqCst);
 				//let s = Path::new(&c);
 				//if log { std::fs::write(format!("ba {}.txt", s.file_name().unwrap().to_string_lossy()), format!("emit decom success {:?}", s)); }
 				//println!("Successfully emitted files-selected event with {} files", file_strings3.len())
@@ -385,7 +451,8 @@ pub fn run_decom_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<
 	});
 }
 
-pub async fn run_compression_dialog(file_strings: Vec<String>, files: Vec<PathBuf>, window_count: Arc<AtomicUsize>) -> Result<()> {
+
+pub async fn run_compression_dialog(file_strings: Vec<String>, files: Vec<PathBuf>, gui_state: Arc<GuiState>) -> Result<()> {
     println!("Starting Tauri compression app with {} files", files.len());
     
 	let log = false;
@@ -393,28 +460,41 @@ pub async fn run_compression_dialog(file_strings: Vec<String>, files: Vec<PathBu
 	let file_strings2b = file_strings.clone();
     if log { std::fs::write("a.txt", "before"); }
 	
-	let window_count_clone = window_count.clone();
-	let window_count_clone2 = window_count.clone();
-	let window_count_clone3 = window_count.clone();
+	let item_clone = gui_state.item_count.clone();
+	let item_clone2 = gui_state.item_count.clone();
+	let item_clone3 = gui_state.item_count.clone();
+	let window_count_clone = gui_state.window_count.clone();
+	let window_count_clone2 = gui_state.window_count.clone();
+	let window_count_clone3 = gui_state.window_count.clone();
+	let count_now_clone = gui_state.count_now.clone();
+	let count_now_clone2 = gui_state.count_now.clone();
+	let count_now_clone3 = gui_state.count_now.clone();
+	let arg_received_clone = gui_state.arg_received.clone();
+	let arg_received_clone2 = gui_state.arg_received.clone();
+	let arg_received_clone3 = gui_state.arg_received.clone();
+	
 	tauri::Builder::default()
 		.invoke_handler(tauri::generate_handler![
             compress_files_command,
             get_compression_types,
             validate_compression_type,
             open_file_location,
-			close
+			close,
+			count_now
         ])
-		.manage(window_count_clone.clone()) // store it in Tauri state
+		.manage(gui_state.clone()) // store it in Tauri state
+		//.manage(item_clone.clone()) // store it in Tauri state
 		//.plugin(tauri_plugin_shell::init())
 		//.plugin(tauri_plugin_cli::init())
         .plugin(tauri_plugin_single_instance::init(move |app, argv, _cwd| {
 			//println!("Tauri compression app setup started");
 			if log { std::fs::write("abc.txt", format!("{:?}", argv.clone())); }
-            run_app(app, file_strings2.clone(), argv.clone(), window_count_clone.clone());			
+            run_app(app, file_strings2.clone(), argv.clone(), Arc::new(GuiState { window_count: window_count_clone2.clone(), item_count: item_clone.clone(), count_now: count_now_clone.clone(), arg_received: arg_received_clone.clone() }));
 			//return Ok(());
 		}))
 		.setup(move |app| {
-			let count = window_count_clone3.fetch_add(1, Ordering::SeqCst);
+			let appx = app.app_handle().clone();
+			let count = window_count_clone.fetch_add(1, Ordering::SeqCst);
 			if let Some(window) = app.get_webview_window("main") {
 				let _ = window.center();
 			}
@@ -422,8 +502,28 @@ pub async fn run_compression_dialog(file_strings: Vec<String>, files: Vec<PathBu
 			for x in files {
 				fb.push(x.display().to_string());
 			}
-			run_app(&app.app_handle(), file_strings2b.clone(), fb.clone(), window_count_clone2.clone() );
+			run_app(&app.app_handle(), file_strings2b.clone(), fb.clone(), Arc::new(GuiState { window_count: window_count_clone3.clone(), item_count: item_clone2.clone(), count_now: count_now_clone2.clone(), arg_received: arg_received_clone2.clone() }));
 			
+			let app3 = appx.clone();
+			{
+				tokio::spawn(async move {
+					while true {
+						let mut c = 0;
+						{
+							c = *count_now_clone3.lock().unwrap();
+						}
+						
+						tokio::time::sleep(Duration::from_millis(1000));
+						
+						let itemc = item_clone3.fetch_add(0, Ordering::SeqCst);
+						//let total_arg = *arg_received_clone3.lock().unwrap();
+						if itemc == c && itemc != 0 {
+							app3.emit("enable-ok", "");
+							break;
+						}
+					}
+				});
+			}
 			return Ok(());
 		}
 		)
@@ -433,31 +533,44 @@ pub async fn run_compression_dialog(file_strings: Vec<String>, files: Vec<PathBu
 	Ok(())
 }
 
-pub async fn run_decompression_dialog(file_strings: Vec<String>, files: Vec<PathBuf>, window_count: Arc<AtomicUsize>) -> Result<()> {
+pub async fn run_decompression_dialog(file_strings: Vec<String>, files: Vec<PathBuf>, gui_state: Arc<GuiState>) -> Result<()> {
     println!("Starting Tauri decompression app with {} files", files.len());
     
 	let log = false;
     let file_strings2 = file_strings.clone();
 	let file_strings2b = file_strings.clone();
 	
-	let window_count_clone = window_count.clone();
-	let window_count_clone2 = window_count.clone();
-	let window_count_clone3 = window_count.clone();
+	let item_clone = gui_state.item_count.clone();
+	let item_clone2 = gui_state.item_count.clone();
+	let item_clone3 = gui_state.item_count.clone();
+	let window_count_clone = gui_state.window_count.clone();
+	let window_count_clone2 = gui_state.window_count.clone();
+	let window_count_clone3 = gui_state.window_count.clone();
+	let count_now_clone = gui_state.count_now.clone();
+	let count_now_clone2 = gui_state.count_now.clone();
+	let count_now_clone3 = gui_state.count_now.clone();
+	let arg_received_clone = gui_state.arg_received.clone();
+	let arg_received_clone2 = gui_state.arg_received.clone();
+	let arg_received_clone3 = gui_state.arg_received.clone();
+	
 	tauri::Builder::default()
 		.invoke_handler(tauri::generate_handler![
             decompress_files_command,
             open_file_location,
-			close
+			close,
+			count_now
         ])
-		.manage(window_count_clone.clone()) // store it in Tauri state
+		.manage(gui_state.clone()) // store it in Tauri state
+		//.manage(item_clone.clone()) // store it in Tauri state
 		//.plugin(tauri_plugin_shell::init())
 		//.plugin(tauri_plugin_cli::init())
         .plugin(tauri_plugin_single_instance::init(move |app, argv, _cwd| {
 			if log { std::fs::write("def.txt", format!("{:?}", argv.clone())); }
-			run_decom_app(app, file_strings2.clone(), argv.clone(), window_count_clone.clone());
+			run_decom_app(app, file_strings2.clone(), argv.clone(), Arc::new(GuiState { window_count: window_count_clone2.clone(), item_count: item_clone.clone(), count_now: count_now_clone.clone(), arg_received: arg_received_clone.clone()}));
         }))
 		.setup(move |app| {
-			let count = window_count_clone3.fetch_add(1, Ordering::SeqCst);
+			let appx = app.app_handle().clone();
+			let count = window_count_clone.fetch_add(1, Ordering::SeqCst);
 			if let Some(window) = app.get_webview_window("main") {
 				let _ = window.center();
 			}
@@ -465,8 +578,28 @@ pub async fn run_decompression_dialog(file_strings: Vec<String>, files: Vec<Path
 			for x in files {
 				fb.push(x.display().to_string());
 			}
-			run_decom_app(&app.app_handle(), file_strings2b.clone(), fb.clone(), window_count_clone2.clone());
+			run_decom_app(&app.app_handle(), file_strings2b.clone(), fb.clone(), Arc::new(GuiState { window_count: window_count_clone3.clone(), item_count: item_clone2.clone(), count_now: count_now_clone2.clone(), arg_received: arg_received_clone2.clone()}));
 			
+			let app3 = appx.clone();
+			{
+				tokio::spawn(async move {
+					while true {
+						let mut c = 0;
+						{
+							c = *count_now_clone3.lock().unwrap();
+						}
+						
+						tokio::time::sleep(Duration::from_millis(1000));
+						
+						let itemc = item_clone3.fetch_add(0, Ordering::SeqCst);
+						//let total_arg = *arg_received_clone3.lock().unwrap();
+						if itemc == c && itemc != 0 {
+							app3.emit("enable-ok", "");
+							break;
+						}
+					}
+				});
+			}
 			return Ok(());
 		}
         )
