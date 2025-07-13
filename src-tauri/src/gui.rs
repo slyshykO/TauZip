@@ -315,7 +315,7 @@ async fn open_file_location(file_path: String) -> Result<(), String> {
 }
 
 pub fn run_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<String>, gui_state: Arc<GuiState>) {
-	let log = false;
+	let log = true;
 	if log { std::fs::write("aa.txt", format!("run_app")); }
 	
 	let file_args: Vec<String> = argv.into_iter().skip(2).collect();
@@ -455,7 +455,7 @@ pub fn run_decom_app(app: &AppHandle, mut file_strings2: Vec<String>, argv: Vec<
 pub async fn run_compression_dialog(file_strings: Vec<String>, files: Vec<PathBuf>, gui_state: Arc<GuiState>) -> Result<()> {
     println!("Starting Tauri compression app with {} files", files.len());
     
-	let log = false;
+	let log = true;
 	let file_strings2 = file_strings.clone();
 	let file_strings2b = file_strings.clone();
     if log { std::fs::write("a.txt", "before"); }
@@ -516,8 +516,9 @@ pub async fn run_compression_dialog(file_strings: Vec<String>, files: Vec<PathBu
 						tokio::time::sleep(Duration::from_millis(1000));
 						
 						let itemc = item_clone3.fetch_add(0, Ordering::SeqCst);
-						//let total_arg = *arg_received_clone3.lock().unwrap();
-						if itemc == c && itemc != 0 {
+						let total_arg = *arg_received_clone3.lock().unwrap();
+						if ((itemc == c && itemc != 0) || 
+							(total_arg == itemc && itemc != 0)){
 							app3.emit("enable-ok", "");
 							break;
 						}
@@ -592,8 +593,9 @@ pub async fn run_decompression_dialog(file_strings: Vec<String>, files: Vec<Path
 						tokio::time::sleep(Duration::from_millis(1000));
 						
 						let itemc = item_clone3.fetch_add(0, Ordering::SeqCst);
-						//let total_arg = *arg_received_clone3.lock().unwrap();
-						if itemc == c && itemc != 0 {
+						let total_arg = *arg_received_clone3.lock().unwrap();
+						if ((itemc == c && itemc != 0) || 
+							(total_arg == c && total_arg != 0)){
 							app3.emit("enable-ok", "");
 							break;
 						}
