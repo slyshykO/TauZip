@@ -1,95 +1,50 @@
 {
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "TauZip",
+  "version": "0.1.0",
+  "identifier": "com.tauzip.dev",
   "build": {
-    "beforeBuildCommand": "",
-    "beforeDevCommand": "",
-    "devPath": "../ui",
-    "distDir": "../ui",
-	"withGlobalTauri": true
+    "frontendDist": "../dist"
   },
-  "package": {
-    "productName": "Gallery",
-    "version": "0.1.2"
+  "plugins": {
+    "cli": {
+      "description": "tauzip",
+      "args": [
+        {
+          "name": "files",
+          "description": "Files to open",
+          "takesValue": true,
+          "multiple": true
+        }
+      ]
+    }
   },
-  "tauri": {
-    "allowlist": {
-	  "window": {
-        "all": false,
-        "close": true,
-        "hide": true,
-        "show": true,
-        "maximize": true,
-        "minimize": true,
-        "unmaximize": true,
-        "unminimize": true,
-        "startDragging": true
-      },
-	  "fs": {
-		  "all": true,
-		  "readFile": true,
-		  "writeFile": true,
-		  "readDir": true,
-		  "copyFile": true,
-		  "createDir": true,
-		  "removeDir": true,
-		  "removeFile": true,
-		  "renameFile": true,
-		  "exists": true
-	  },
-	  "dialog": {
-		  "all": true,
-		  "ask": true,
-		  "confirm": true,
-		  "message": true,
-		  "open": true,
-		  "save": true
-	  }
-    },
-    "bundle": {
-      "active": true,
-      "category": "DeveloperTool",
-      "copyright": "",
-      "deb": {
-        "depends": []
-      },
-      "externalBin": [],
-      "icon": [
-		    "icons/Original.png",
-		    "icons/128x128.png",
-			"icons/icon.ico"
-	    ],
-      "identifier": "com.gallery.dev",
-      "longDescription": "A simple file explorer with nice ui and good features.",
-      "macOS": {
-        "entitlements": null,
-        "exceptionDomain": "",
-        "frameworks": [],
-        "providerShortName": null,
-        "signingIdentity": null
-      },
-      "resources": [],
-      "shortDescription": "",
-      "targets": "all",
-      "windows": {
-        "certificateThumbprint": null,
-        "digestAlgorithm": "sha256",
-        "timestampUrl": ""
-      }
-    },
-    "security": {
-      "csp": null
-    },
-    "updater": {
-      "active": false
-    },
+  "app": { 
+    "withGlobalTauri": true,
     "windows": [
       {
-		"decorations": false,
-        "fullscreen": false,
-        "height": 600,
+		"label": "main",
+        "title": "TauZip",
+        "width": 540,
+        "height": 330,
         "resizable": true,
-        "title": "Gallery",
-        "width": 1080
+        "fullscreen": false,
+		"url": "index.html",
+		"closable": false
       }
+    ],
+    "security": {
+      "csp": "default-src 'self' ipc.localhost; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';",
+	  "dangerousDisableAssetCspModification": true
+	}
+  }, 
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/512x512.png",
+      "icons/icon.ico"
     ]
   }
 }
+
